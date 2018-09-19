@@ -8,15 +8,10 @@
 <div class="container">
 
     <h1>
-        jsminimal/index.html
+        WEB PACS EXAMPLE
     </h1>
 
-    This is an example of the minimal use of cornerstone driven by javascript
-
-    <br>
-    <br>
-
-    In this example, javascript is used to image enable a div.
+    CornerStone Dicom Image View
 
     <br>
     <br>
@@ -35,11 +30,12 @@
 <script src="../exampleImageIdLoader.js"></script>
 
 <script>
-    const imageId = 'example://1';
+    const imageId = 'example://2';
     const element = document.getElementById('dicomImage');
     cornerstone.enable(element);
     cornerstone.loadImage(imageId).then(function(image) {
         cornerstone.displayImage(element, image);
+        console.log(image);
     });
 </script>
 </html>

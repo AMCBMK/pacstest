@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\enable.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\enable.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">63.13</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">97</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">23.25</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.34</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { addEnabledElement } from &#039;./enabledElements.js&#039;;
+import resize from &#039;./resize.js&#039;;
+import drawImageSync from &#039;./internal/drawImageSync.js&#039;;
+import requestAnimationFrame from &#039;./internal/requestAnimationFrame.js&#039;;
+import tryEnableWebgl from &#039;./internal/tryEnableWebgl.js&#039;;
+import triggerEvent from &#039;./triggerEvent.js&#039;;
+import EVENTS from &#039;./events.js&#039;;
+import getCanvas from &#039;./internal/getCanvas.js&#039;;
+
+/**
+ * @module Enable
+ * This module is responsible for enabling an element to display images with cornerstone
+ */
+
+/**
+ * Returns whether or not an Enabled Element has either a currently active image or
+ * a non-empty Array of Enabled Element Layers.
+ *
+ * @param {EnabledElement} enabledElement An Enabled Element
+ * @return {Boolean} Whether or not the Enabled Element has an active image or valid set of layers
+ * @memberof Enable
+ */
+function hasImageOrLayers (enabledElement) {
+  return enabledElement.image !== undefined || enabledElement.layers.length &gt; 0;
+}
+
+/**
+ * Enable an HTML Element for use in Cornerstone
+ *
+ * - If there is a Canvas already present within the HTMLElement, and it has the class
+ * &#039;cornerstone-canvas&#039;, this function will use this existing Canvas instead of creating
+ * a new one. This may be helpful when using libraries (e.g. React, Vue) which don&#039;t
+ * want third parties to change the DOM.
+ *
+ * @param {HTMLElement} element An HTML Element enabled for Cornerstone
+ * @param {Object} options Options for the enabledElement
+ *
+ * @return {void}
+ * @memberof Enable
+ */
+export default function (element, options) {
+  if (element === undefined) {
+    throw new Error(&#039;enable: parameter element cannot be undefined&#039;);
+  }
+
+  // If this enabled element has the option set for WebGL, we should
+  // Check if this device actually supports it
+  if (options &amp;&amp; options.renderer &amp;&amp; options.renderer.toLowerCase() === &#039;webgl&#039;) {
+    tryEnableWebgl(options);
+  }
+
+  const canvas = getCanvas(element);
+
+  const enabledElement = {
+    element,
+    canvas,
+    image: undefined, // Will be set once image is loaded
+    invalid: false, // True if image needs to be drawn, false if not
+    needsRedraw: true,
+    options,
+    layers: [],
+    data: {},
+    renderingTools: {}
+  };
+
+  addEnabledElement(enabledElement);
+
+  resize(element, true);
+
+  /**
+   * Draw the image immediately
+   *
+   * @param {DOMHighResTimeStamp} timestamp The current time for when requestAnimationFrame starts to fire callbacks
+   * @returns {void}
+   * @memberof Drawing
+   */
+  function draw (timestamp) {
+    if (enabledElement.canvas === undefined) {
+      return;
+    }
+
+    const eventDetails = {
+      enabledElement,
+      timestamp
+    };
+
+    triggerEvent(enabledElement.element, EVENTS.PRE_RENDER, eventDetails);
+
+    if (enabledElement.needsRedraw &amp;&amp; hasImageOrLayers(enabledElement)) {
+      drawImageSync(enabledElement, enabledElement.invalid);
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

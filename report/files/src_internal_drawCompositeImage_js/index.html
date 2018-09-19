@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\internal\drawCompositeImage.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\internal\drawCompositeImage.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.42</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">174</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">45.86</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.31</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { getLayers, getActiveLayer, getVisibleLayers } from &#039;../layers.js&#039;;
+import { addGrayscaleLayer } from &#039;../rendering/renderGrayscaleImage.js&#039;;
+import { addColorLayer } from &#039;../rendering/renderColorImage.js&#039;;
+import { addPseudoColorLayer } from &#039;../rendering/renderPseudoColorImage.js&#039;;
+import { addLabelMapLayer } from &#039;../rendering/renderLabelMapImage.js&#039;;
+import setToPixelCoordinateSystem from &#039;../setToPixelCoordinateSystem.js&#039;;
+
+function getViewportRatio (baseLayer, targetLayer) {
+  if (!baseLayer.syncProps) {
+    updateLayerSyncProps(baseLayer);
+  }
+
+  if (!targetLayer.syncProps) {
+    updateLayerSyncProps(targetLayer);
+  }
+
+  return targetLayer.syncProps.originalScale / baseLayer.syncProps.originalScale;
+}
+
+function updateLayerSyncProps (layer) {
+  const syncProps = layer.syncProps || {};
+
+  // This is used to keep each of the layers&#039; viewports in sync with the active layer
+  syncProps.originalScale = layer.viewport.scale;
+
+  layer.syncProps = syncProps;
+}
+
+// Sync all viewports based on active layer&#039;s viewport
+function syncViewports (layers, activeLayer) {
+  // If we intend to keep the viewport&#039;s scale, translation and rotation in sync,
+  // loop through the layers
+  layers.forEach((layer) =&gt; {
+    // Don&#039;t do anything to the active layer
+    // Don&#039;t do anything if this layer has no viewport
+    if (layer === activeLayer ||
+        !layer.viewport ||
+        !activeLayer.viewport) {
+      return;
+    }
+
+    if (!layer.syncProps) {
+      updateLayerSyncProps(layer);
+    }
+
+    const viewportRatio = getViewportRatio(activeLayer, layer);
+
+    // Update the layer&#039;s translation and scale to keep them in sync with the first image
+    // based on the ratios between the images
+    layer.viewport.scale = activeLayer.viewport.scale * viewportRatio;
+    layer.viewport.rotation = activeLayer.viewport.rotation;
+    layer.viewport.translation = {
+      x: (activeLayer.viewport.translation.x / viewportRatio),
+      y: (activeLayer.viewport.translation.y / viewportRatio)
+    };
+    layer.viewport.hflip = activeLayer.viewport.hflip;
+    layer.viewport.vflip = activeLayer.viewport.vflip;
+  });
+}
+
+/**
+ * Internal function to render all layers for a Cornerstone enabled element
+ *
+ * @param {CanvasRenderingContext2D} context Canvas context to draw upon
+ * @param {EnabledElementLayer[]} layers The array of all layers for this enabled element
+ * @param {Boolean} invalidated A boolean whether or not this image has been invalidated and must be redrawn
+ * @returns {void}
+ * @memberof Internal
+ */
+function renderLayers (context, layers, invalidated) {
+  // Loop through each layer and draw it to the canvas
+  layers.forEach((layer, index) =&gt; {
+    if (!layer.image) {
+      return;
+    }
+
+    context.save();
+
+    // Set the layer&#039;s canvas to the pixel coordinate system
+    layer.canvas = context.canvas;
+    setToPixelCoordinateSystem(layer, context);
+
+    // Render into the layer&#039;s canvas
+    const colormap = layer.viewport.colormap || layer.options.colormap;
+    const labelmap = layer.viewport.labelmap;
+    const isInvalid = layer.invalid || invalidated;
+
+    if (colormap &amp;&amp; colormap !== &#039;&#039; &amp;&amp; labelmap === true) {
+      addLabelMapLayer(layer, isInvalid);
+    } else if (colormap &amp;&amp; colormap !== &#039;&#039;) {
+      addPseudoColorLayer(layer, isInvalid);
+    } else if (layer.image.color === true) {
+      addColorLayer(layer, isInvalid);
+    } else {
+      // If this is the base layer, use the alpha channel for rendering of the grayscale image
+      const useAlphaChannel = (index === 0);
+
+      addGrayscaleLayer(layer, isInvalid, useAlphaChannel);
+    }
+
+    // Apply any global opacity settings that have been defined for this layer
+    if (layer.options &amp;&amp; layer.options.opacity) {
+      context.globalAlpha = layer.options.opacity;
+    } else {
+      context.globalAlpha = 1;
+    }
+
+    if (layer.options &amp;&amp; layer.options.fillStyle) {
+      context.fillStyle = layer.options.fillStyle;
+    }
+
+    // Set the pixelReplication property before drawing from the layer into the
+    // composite canvas
+    context.imageSmoothingEnabled = !layer.viewport.pixelReplication;
+    context.mozImageSmoothingEnabled = context.imageSmoothingEnabled;
+
+    // Draw from the current layer&#039;s canvas onto the enabled element&#039;s canvas
+    const sx = layer.viewport.displayedArea.tlhc.x - 1;
+    const sy = layer.viewport.displayedArea.tlhc.y - 1;
+    const width = layer.viewport.displayedArea.brhc.x - sx;
+    const height = layer.viewport.displayedArea.brhc.y - sy;
+
+    context.drawImage(layer.canvas, sx, sy, width, height, 0, 0, width, height);
+    context.restore();
+
+    layer.invalid = false;
+  });
+}
+
+/**
+ * Internal API function to draw a composite image to a given enabled element
+ *
+ * @param {EnabledElement} enabledElement An enabled element to draw into
+ * @param {Boolean} invalidated - true if pixel data has been invalidated and cached rendering should not be used
+ * @returns {void}
+ */
+export default function (enabledElement, invalidated) {
+  const element = enabledElement.element;
+  const allLayers = getLayers(element);
+  const activeLayer = getActiveLayer(element);
+  const visibleLayers = getVisibleLayers(element);
+  const resynced = !enabledElement.lastSyncViewportsState &amp;&amp; enabledElement.syncViewports;
+
+  // This state will help us to determine if the user has re-synced the
+  // layers allowing us to make a new copy of the viewports
+  enabledElement.lastSyncViewportsState = enabledElement.syncViewports;
+
+  // Stores a copy of all viewports if the user has just synced them then we can use the
+  // copies to calculate anything later (ratio, translation offset, rotation offset, etc)
+  if (resynced) {
+    allLayers.forEach(function (layer) {
+      if (layer.viewport) {
+        updateLayerSyncProps(layer);
+      }
+    });
+  }
+
+  // Sync all viewports in case it&#039;s activated
+  if (enabledElement.syncViewports === true) {
+    syncViewports(visibleLayers, activeLayer);
+  }
+
+  // Get the enabled element&#039;s canvas so we can draw to it
+  const context = enabledElement.canvas.getContext(&#039;2d&#039;);
+
+  context.setTransform(1, 0, 0, 1, 0, 0);
+
+  // Clear the canvas
+  context.fillStyle = &#039;black&#039;;
+  context.fillRect(0, 0, enabledElement.canvas.width, enabledElement.canvas.height);
+
+  // Render all visible layers
+  renderLayers(context, visibleLayers, invalidated);
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

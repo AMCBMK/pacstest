@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\resize.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\resize.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">63.52</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">122</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">33.40</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.63</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { getEnabledElement } from &#039;./enabledElements.js&#039;;
+import fitToWindow from &#039;./fitToWindow.js&#039;;
+import updateImage from &#039;./updateImage.js&#039;;
+import triggerEvent from &#039;./triggerEvent.js&#039;;
+import getImageSize from &#039;./internal/getImageSize.js&#039;;
+import EVENTS from &#039;./events.js&#039;;
+
+/**
+ * This module is responsible for enabling an element to display images with cornerstone
+ *
+ * @param {HTMLElement} element The DOM element enabled for Cornerstone
+ * @param {HTMLElement} canvas The Canvas DOM element within the DOM element enabled for Cornerstone
+ * @returns {void}
+ */
+function setCanvasSize (element, canvas) {
+  // The device pixel ratio is 1.0 for normal displays and &gt; 1.0
+  // For high DPI displays like Retina
+  /*
+
+    This functionality is disabled due to buggy behavior on systems with mixed DPI&#039;s.  If the canvas
+    is created on a display with high DPI (e.g. 2.0) and then the browser window is dragged to
+    a different display with a different DPI (e.g. 1.0), the canvas is not recreated so the pageToPixel
+    produces incorrect results.  I couldn&#039;t find any way to determine when the DPI changed other than
+    by polling which is not very clean.  If anyone has any ideas here, please let me know, but for now
+    we will disable this functionality.  We may want
+    to add a mechanism to optionally enable this functionality if we can determine it is safe to do
+    so (e.g. iPad or iPhone or perhaps enumerate the displays on the system.  I am choosing
+    to be cautious here since I would rather not have bug reports or safety issues related to this
+    scenario.
+
+    var devicePixelRatio = window.devicePixelRatio;
+    if(devicePixelRatio === undefined) {
+        devicePixelRatio = 1.0;
+    }
+    */
+
+  // Avoid setting the same value because it flashes the canvas with IE and Edge
+  if (canvas.width !== element.clientWidth) {
+    canvas.width = element.clientWidth;
+    canvas.style.width = `${element.clientWidth}px`;
+  }
+  // Avoid setting the same value because it flashes the canvas with IE and Edge
+  if (canvas.height !== element.clientHeight) {
+    canvas.height = element.clientHeight;
+    canvas.style.height = `${element.clientHeight}px`;
+  }
+}
+
+/**
+ * Checks if the image of a given enabled element fitted the window
+ * before the resize
+ *
+ * @param {EnabledElement} enabledElement The Cornerstone Enabled Element
+ * @param {number} oldCanvasWidth The width of the canvas before the resize
+ * @param {number} oldCanvasHeight The height of the canvas before the resize
+ * @return {Boolean} true if it fitted the windows, false otherwise
+ */
+function wasFitToWindow (enabledElement, oldCanvasWidth, oldCanvasHeight) {
+  const scale = enabledElement.viewport.scale;
+  const imageSize = getImageSize(enabledElement.image, enabledElement.viewport.rotation);
+  const imageWidth = Math.round(imageSize.width * scale);
+  const imageHeight = Math.round(imageSize.height * scale);
+  const x = enabledElement.viewport.translation.x;
+  const y = enabledElement.viewport.translation.y;
+
+  return (imageWidth === oldCanvasWidth &amp;&amp; imageHeight &lt;= oldCanvasHeight) ||
+    (imageWidth &lt;= oldCanvasWidth &amp;&amp; imageHeight === oldCanvasHeight) &amp;&amp;
+    (x === 0 &amp;&amp; y === 0);
+}
+
+/**
+ * Rescale the image relative to the changed size of the canvas
+ *
+ * @param {EnabledElement} enabledElement The Cornerstone Enabled Element
+ * @param {number} oldCanvasWidth The width of the canvas before the resize
+ * @param {number} oldCanvasHeight The height of the canvas before the resize
+ * @return {void}
+ */
+function relativeRescale (enabledElement, oldCanvasWidth, oldCanvasHeight) {
+  const scale = enabledElement.viewport.scale;
+  const canvasWidth = enabledElement.canvas.width;
+  const canvasHeight = enabledElement.canvas.height;
+  const relWidthChange = canvasWidth / oldCanvasWidth;
+  const relHeightChange = canvasHeight / oldCanvasHeight;
+  const relChange = Math.sqrt(relWidthChange * relHeightChange);
+
+  enabledElement.viewport.scale = relChange * scale;
+}
+
+/**
+ * Resizes an enabled element and optionally fits the image to window
+ *
+ * @param {HTMLElement} element The DOM element enabled for Cornerstone
+ * @param {Boolean} forceFitToWindow true to to force a refit, false to rescale accordingly
+ * @returns {void}
+ */
+export default function (element, forceFitToWindow) {
+  const enabledElement = getEnabledElement(element);
+
+  const oldCanvasWidth = enabledElement.canvas.width;
+  const oldCanvasHeight = enabledElement.canvas.height;
+
+  setCanvasSize(element, enabledElement.canvas);
+
+  const eventData = { element };
+
+  triggerEvent(element, EVENTS.ELEMENT_RESIZED, eventData);
+
+  if (enabledElement.image === undefined) {
+    return;
+  }
+
+  if (forceFitToWindow || wasFitToWindow(enabledElement, oldCanvasWidth, oldCanvasHeight)) {
+    // Fit the image to the window again if it fitted before the resize
+    fitToWindow(element);
+  } else {
+    // Adapt the scale of a zoomed or panned image relative to the size change
+    relativeRescale(enabledElement, oldCanvasWidth, oldCanvasHeight);
+
+    updateImage(element);
+  }
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

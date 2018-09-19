@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\imageCache.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\imageCache.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">66.93</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">235</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">65.01</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.35</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import EVENTS, { events } from &#039;./events.js&#039;;
+import triggerEvent from &#039;./triggerEvent.js&#039;;
+
+/**
+ * This module deals with caching images
+ * @module ImageCache
+ */
+
+let maximumSizeInBytes = 1024 * 1024 * 1024; // 1 GB
+let cacheSizeInBytes = 0;
+
+// Dictionary of imageId to cachedImage objects
+const imageCacheDict = {};
+
+// Array of cachedImage objects
+export const cachedImages = [];
+
+export function setMaximumSizeBytes (numBytes) {
+  if (numBytes === undefined) {
+    throw new Error(&#039;setMaximumSizeBytes: parameter numBytes must not be undefined&#039;);
+  }
+  if (numBytes.toFixed === undefined) {
+    throw new Error(&#039;setMaximumSizeBytes: parameter numBytes must be a number&#039;);
+  }
+
+  maximumSizeInBytes = numBytes;
+
+  triggerEvent(events, EVENTS.IMAGE_CACHE_MAXIMUM_SIZE_CHANGED);
+
+  purgeCacheIfNecessary();
+}
+
+function purgeCacheIfNecessary () {
+  // If max cache size has not been exceeded, do nothing
+  if (cacheSizeInBytes &lt;= maximumSizeInBytes) {
+    return;
+  }
+
+  // Cache size has been exceeded, create list of images sorted by timeStamp
+  // So we can purge the least recently used image
+  function compare (a, b) {
+    if (a.timeStamp &gt; b.timeStamp) {
+      return -1;
+    }
+    if (a.timeStamp &lt; b.timeStamp) {
+      return 1;
+    }
+
+    return 0;
+  }
+  cachedImages.sort(compare);
+
+  // Remove images as necessary)
+  while (cacheSizeInBytes &gt; maximumSizeInBytes) {
+    const lastCachedImage = cachedImages[cachedImages.length - 1];
+    const imageId = lastCachedImage.imageId;
+
+    removeImageLoadObject(imageId);
+
+    triggerEvent(events, EVENTS.IMAGE_CACHE_PROMISE_REMOVED, { imageId });
+  }
+
+  const cacheInfo = getCacheInfo();
+
+  triggerEvent(events, EVENTS.IMAGE_CACHE_FULL, cacheInfo);
+}
+
+export function putImageLoadObject (imageId, imageLoadObject) {
+  if (imageId === undefined) {
+    throw new Error(&#039;putImageLoadObject: imageId must not be undefined&#039;);
+  }
+  if (imageLoadObject.promise === undefined) {
+    throw new Error(&#039;putImageLoadObject: imageLoadObject.promise must not be undefined&#039;);
+  }
+  if (imageCacheDict.hasOwnProperty(imageId) === true) {
+    throw new Error(&#039;putImageLoadObject: imageId already in cache&#039;);
+  }
+  if (imageLoadObject.cancelFn &amp;&amp; typeof imageLoadObject.cancelFn !== &#039;function&#039;) {
+    throw new Error(&#039;putImageLoadObject: imageLoadObject.cancelFn must be a function&#039;);
+  }
+
+  const cachedImage = {
+    loaded: false,
+    imageId,
+    sharedCacheKey: undefined, // The sharedCacheKey for this imageId.  undefined by default
+    imageLoadObject,
+    timeStamp: Date.now(),
+    sizeInBytes: 0
+  };
+
+  imageCacheDict[imageId] = cachedImage;
+  cachedImages.push(cachedImage);
+
+  imageLoadObject.promise.then(function (image) {
+    if (cachedImages.indexOf(cachedImage) === -1) {
+      // If the image has been purged before being loaded, we stop here.
+      return;
+    }
+
+    cachedImage.loaded = true;
+    cachedImage.image = image;
+
+    if (image.sizeInBytes === undefined) {
+      throw new Error(&#039;putImageLoadObject: image.sizeInBytes must not be undefined&#039;);
+    }
+    if (image.sizeInBytes.toFixed === undefined) {
+      throw new Error(&#039;putImageLoadObject: image.sizeInBytes is not a number&#039;);
+    }
+
+    cachedImage.sizeInBytes = image.sizeInBytes;
+    cacheSizeInBytes += cachedImage.sizeInBytes;
+
+    const eventDetails = {
+      action: &#039;addImage&#039;,
+      image: cachedImage
+    };
+
+    triggerEvent(events, EVENTS.IMAGE_CACHE_CHANGED, eventDetails);
+
+    cachedImage.sharedCacheKey = image.sharedCacheKey;
+
+    purgeCacheIfNecessary();
+  }, () =&gt; {
+    const cachedImage = imageCacheDict[imageId];
+
+    cachedImages.splice(cachedImages.indexOf(cachedImage), 1);
+    delete imageCacheDict[imageId];
+  });
+}
+
+export function getImageLoadObject (imageId) {
+  if (imageId === undefined) {
+    throw new Error(&#039;getImageLoadObject: imageId must not be undefined&#039;);
+  }
+  const cachedImage = imageCacheDict[imageId];
+
+  if (cachedImage === undefined) {
+    return;
+  }
+
+  // Bump time stamp for cached image
+  cachedImage.timeStamp = Date.now();
+
+  return cachedImage.imageLoadObject;
+}
+
+export function removeImageLoadObject (imageId) {
+  if (imageId === undefined) {
+    throw new Error(&#039;removeImageLoadObject: imageId must not be undefined&#039;);
+  }
+  const cachedImage = imageCacheDict[imageId];
+
+  if (cachedImage === undefined) {
+    throw new Error(&#039;removeImageLoadObject: imageId was not present in imageCache&#039;);
+  }
+
+  cachedImages.splice(cachedImages.indexOf(cachedImage), 1);
+  cacheSizeInBytes -= cachedImage.sizeInBytes;
+
+  const eventDetails = {
+    action: &#039;deleteImage&#039;,
+    image: cachedImage
+  };
+
+  triggerEvent(events, EVENTS.IMAGE_CACHE_CHANGED, eventDetails);
+  decache(cachedImage.imageLoadObject);
+
+  delete imageCacheDict[imageId];
+}
+
+export function getCacheInfo () {
+  return {
+    maximumSizeInBytes,
+    cacheSizeInBytes,
+    numberOfImagesCached: cachedImages.length
+  };
+}
+
+// This method should only be called by `removeImageLoadObject` because it&#039;s
+// The one that knows how to deal with shared cache keys and cache size.
+function decache (imageLoadObject) {
+  imageLoadObject.promise.then(
+    function () {
+      if (imageLoadObject.decache) {
+        imageLoadObject.decache();
+      }
+    },
+    function () {
+      if (imageLoadObject.decache) {
+        imageLoadObject.decache();
+      }
+    }
+  );
+}
+
+export function purgeCache () {
+  while (cachedImages.length &gt; 0) {
+    const removedCachedImage = cachedImages[0];
+
+    removeImageLoadObject(removedCachedImage.imageId);
+  }
+}
+
+export function changeImageIdCacheSize (imageId, newCacheSize) {
+  const cacheEntry = imageCacheDict[imageId];
+
+  if (cacheEntry) {
+    cacheEntry.imageLoadObject.promise.then(function (image) {
+      const cacheSizeDifference = newCacheSize - image.sizeInBytes;
+
+      image.sizeInBytes = newCacheSize;
+      cacheEntry.sizeInBytes = newCacheSize;
+      cacheSizeInBytes += cacheSizeDifference;
+
+      const eventDetails = {
+        action: &#039;changeImageSize&#039;,
+        image
+      };
+
+      triggerEvent(events, EVENTS.IMAGE_CACHE_CHANGED, eventDetails);
+    });
+  }
+}
+
+export default {
+  imageCache: imageCacheDict,
+  cachedImages,
+  setMaximumSizeBytes,
+  putImageLoadObject,
+  getImageLoadObject,
+  removeImageLoadObject,
+  getCacheInfo,
+  purgeCache,
+  changeImageIdCacheSize
+};</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

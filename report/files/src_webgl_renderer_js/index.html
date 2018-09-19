@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\webgl\renderer.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\webgl\renderer.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.31</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">328</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">50.54</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.65</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">/* eslint no-bitwise: 0 */
+
+import { shaders, dataUtilities } from &#039;./shaders/index.js&#039;;
+import { vertexShader } from &#039;./vertexShader.js&#039;;
+import textureCache from &#039;./textureCache.js&#039;;
+import createProgramFromString from &#039;./createProgramFromString.js&#039;;
+
+const renderCanvas = document.createElement(&#039;canvas&#039;);
+let gl;
+let texCoordBuffer;
+let positionBuffer;
+let isWebGLInitialized = false;
+
+export { isWebGLInitialized };
+
+export function getRenderCanvas () {
+  return renderCanvas;
+}
+
+function initShaders () {
+  for (const id in shaders) {
+    // Console.log(&quot;WEBGL: Loading shader&quot;, id);
+    const shader = shaders[id];
+
+    shader.attributes = {};
+    shader.uniforms = {};
+    shader.vert = vertexShader;
+
+    shader.program = createProgramFromString(gl, shader.vert, shader.frag);
+
+    shader.attributes.texCoordLocation = gl.getAttribLocation(shader.program, &#039;a_texCoord&#039;);
+    gl.enableVertexAttribArray(shader.attributes.texCoordLocation);
+
+    shader.attributes.positionLocation = gl.getAttribLocation(shader.program, &#039;a_position&#039;);
+    gl.enableVertexAttribArray(shader.attributes.positionLocation);
+
+    shader.uniforms.resolutionLocation = gl.getUniformLocation(shader.program, &#039;u_resolution&#039;);
+  }
+}
+
+export function initRenderer () {
+  if (isWebGLInitialized === true) {
+    // Console.log(&quot;WEBGL Renderer already initialized&quot;);
+    return;
+  }
+
+  if (initWebGL(renderCanvas)) {
+    initBuffers();
+    initShaders();
+    // Console.log(&quot;WEBGL Renderer initialized!&quot;);
+    isWebGLInitialized = true;
+  }
+}
+
+function updateRectangle (gl, width, height) {
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    width, height,
+    0, height,
+    width, 0,
+    0, 0]), gl.STATIC_DRAW);
+}
+
+function handleLostContext (event) {
+  event.preventDefault();
+  console.warn(&#039;WebGL Context Lost!&#039;);
+}
+
+function handleRestoredContext (event) {
+  event.preventDefault();
+  isWebGLInitialized = false;
+  textureCache.purgeCache();
+  initRenderer();
+  // Console.log(&#039;WebGL Context Restored.&#039;);
+}
+
+function initWebGL (canvas) {
+
+  gl = null;
+  try {
+    // Try to grab the standard context. If it fails, fallback to experimental.
+    const options = {
+      preserveDrawingBuffer: true // Preserve buffer so we can copy to display canvas element
+    };
+
+    // ---------------- Testing purposes -------------
+    // If (debug === true &amp;&amp; WebGLDebugUtils) {
+    //    RenderCanvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(renderCanvas);
+    // }
+    // ---------------- Testing purposes -------------
+
+    gl = canvas.getContext(&#039;webgl&#039;, options) || canvas.getContext(&#039;experimental-webgl&#039;, options);
+
+    // Set up event listeners for context lost / context restored
+    canvas.removeEventListener(&#039;webglcontextlost&#039;, handleLostContext, false);
+    canvas.addEventListener(&#039;webglcontextlost&#039;, handleLostContext, false);
+
+    canvas.removeEventListener(&#039;webglcontextrestored&#039;, handleRestoredContext, false);
+    canvas.addEventListener(&#039;webglcontextrestored&#039;, handleRestoredContext, false);
+
+  } catch (error) {
+    throw new Error(&#039;Error creating WebGL context&#039;);
+  }
+
+  // If we don&#039;t have a GL context, give up now
+  if (!gl) {
+    console.error(&#039;Unable to initialize WebGL. Your browser may not support it.&#039;);
+    gl = null;
+  }
+
+  return gl;
+}
+
+/**
+ * Returns the image data type as a string representation.
+ * @param {any} image The cornerstone image object
+ * @returns {string} image data type (rgb, iint16, uint16, int8 and uint8)
+ * @memberof WebGLRendering
+ */
+function getImageDataType (image) {
+  if (image.color) {
+    return &#039;rgb&#039;;
+  }
+
+  const pixelData = image.getPixelData();
+
+  if (pixelData instanceof Int16Array) {
+    return &#039;int16&#039;;
+  }
+
+  if (pixelData instanceof Uint16Array) {
+    return &#039;uint16&#039;;
+  }
+
+  if (pixelData instanceof Int8Array) {
+    return &#039;int8&#039;;
+  }
+
+  return &#039;uint8&#039;;
+}
+
+function getShaderProgram (image) {
+
+  const datatype = getImageDataType(image);
+  // We need a mechanism for
+  // Choosing the shader based on the image datatype
+  // Console.log(&quot;Datatype: &quot; + datatype);
+
+  if (shaders.hasOwnProperty(datatype)) {
+    return shaders[datatype];
+  }
+
+  return shaders.rgb;
+}
+
+function generateTexture (image) {
+  const TEXTURE_FORMAT = {
+    uint8: gl.LUMINANCE,
+    int8: gl.LUMINANCE_ALPHA,
+    uint16: gl.LUMINANCE_ALPHA,
+    int16: gl.RGB,
+    rgb: gl.RGB
+  };
+
+  const TEXTURE_BYTES = {
+    int8: 1, // Luminance
+    uint16: 2, // Luminance + Alpha
+    int16: 3, // RGB
+    rgb: 3 // RGB
+  };
+
+  const imageDataType = getImageDataType(image);
+  const format = TEXTURE_FORMAT[imageDataType];
+
+  // GL texture configuration
+  const texture = gl.createTexture();
+
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
+  const imageData = dataUtilities[imageDataType].storedPixelDataToImageData(image, image.width, image.height);
+
+  gl.texImage2D(gl.TEXTURE_2D, 0, format, image.width, image.height, 0, format, gl.UNSIGNED_BYTE, imageData);
+
+  // Calculate the size in bytes of this image in memory
+  const sizeInBytes = image.width * image.height * TEXTURE_BYTES[imageDataType];
+
+  return {
+    texture,
+    sizeInBytes
+  };
+}
+
+function getImageTexture (image) {
+  let imageTexture = textureCache.getImageTexture(image.imageId);
+
+  if (!imageTexture) {
+    // Console.log(&quot;Generating texture for imageid: &quot;, image.imageId);
+    imageTexture = generateTexture(image);
+    textureCache.putImageTexture(image, imageTexture);
+  }
+
+  return imageTexture.texture;
+}
+
+function initBuffers () {
+  positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    1, 1,
+    0, 1,
+    1, 0,
+    0, 0
+  ]), gl.STATIC_DRAW);
+
+
+  texCoordBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    1.0, 1.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    0.0, 0.0
+  ]), gl.STATIC_DRAW);
+}
+
+function renderQuad (shader, parameters, texture, width, height) {
+  gl.clearColor(1.0, 0.0, 0.0, 1.0);
+  gl.viewport(0, 0, width, height);
+
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(shader.program);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+  gl.vertexAttribPointer(shader.attributes.texCoordLocation, 2, gl.FLOAT, false, 0, 0);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.vertexAttribPointer(shader.attributes.positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+  for (const key in parameters) {
+    const uniformLocation = gl.getUniformLocation(shader.program, key);
+
+    if (!uniformLocation) {
+      continue;
+
+      // Disabling this error for now since RGB requires minPixelValue
+      // but the other shaders do not.
+      // throw `Could not access location for uniform: ${key}`;
+    }
+
+    const uniform = parameters[key];
+
+    const type = uniform.type;
+    const value = uniform.value;
+
+    if (type === &#039;i&#039;) {
+      gl.uniform1i(uniformLocation, value);
+    } else if (type === &#039;f&#039;) {
+      gl.uniform1f(uniformLocation, value);
+    } else if (type === &#039;2f&#039;) {
+      gl.uniform2f(uniformLocation, value[0], value[1]);
+    }
+  }
+
+  updateRectangle(gl, width, height);
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+}
+
+export function render (enabledElement) {
+  // Resize the canvas
+  const image = enabledElement.image;
+
+  renderCanvas.width = image.width;
+  renderCanvas.height = image.height;
+
+  const viewport = enabledElement.viewport;
+
+  // Render the current image
+  const shader = getShaderProgram(image);
+  const texture = getImageTexture(image);
+  const parameters = {
+    u_resolution: { type: &#039;2f&#039;,
+      value: [image.width, image.height] },
+    wc: { type: &#039;f&#039;,
+      value: viewport.voi.windowCenter },
+    ww: { type: &#039;f&#039;,
+      value: viewport.voi.windowWidth },
+    slope: { type: &#039;f&#039;,
+      value: image.slope },
+    intercept: { type: &#039;f&#039;,
+      value: image.intercept },
+    minPixelValue: { type: &#039;f&#039;,
+      value: image.minPixelValue },
+    invert: { type: &#039;i&#039;,
+      value: viewport.invert ? 1 : 0 }
+  };
+
+  renderQuad(shader, parameters, texture, image.width, image.height);
+
+  return renderCanvas;
+}
+
+export function isWebGLAvailable () {
+  // Adapted from
+  // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
+
+  const options = {
+    failIfMajorPerformanceCaveat: true
+  };
+
+  try {
+    const canvas = document.createElement(&#039;canvas&#039;);
+
+
+    return Boolean(window.WebGLRenderingContext) &amp;&amp;
+            (canvas.getContext(&#039;webgl&#039;, options) || canvas.getContext(&#039;experimental-webgl&#039;, options));
+  } catch (e) {
+    return false;
+  }
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

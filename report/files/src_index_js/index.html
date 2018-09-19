@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src\index.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src\index.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">100.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">90</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">2.35</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.74</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">// Internal (some of these are from old internal/legacy expose)
+export { default as drawImage } from &#039;./internal/drawImage.js&#039;;
+export { default as generateLut } from &#039;./internal/generateLut.js&#039;;
+export { default as getDefaultViewport } from &#039;./internal/getDefaultViewport.js&#039;;
+export { default as requestAnimationFrame } from &#039;./internal/requestAnimationFrame.js&#039;;
+export { default as storedPixelDataToCanvasImageData } from &#039;./internal/storedPixelDataToCanvasImageData.js&#039;;
+export { default as storedColorPixelDataToCanvasImageData } from &#039;./internal/storedColorPixelDataToCanvasImageData.js&#039;;
+export { default as storedPixelDataToCanvasImageDataColorLUT } from &#039;./internal/storedPixelDataToCanvasImageDataColorLUT.js&#039;;
+export { default as storedPixelDataToCanvasImageDataPseudocolorLUT } from &#039;./internal/storedPixelDataToCanvasImageDataPseudocolorLUT.js&#039;;
+
+export { default as internal } from &#039;./internal/index.js&#039;;
+
+// Rendering
+export { renderLabelMapImage } from &#039;./rendering/renderLabelMapImage.js&#039;;
+export { renderPseudoColorImage } from &#039;./rendering/renderPseudoColorImage.js&#039;;
+export { renderColorImage } from &#039;./rendering/renderColorImage.js&#039;;
+export { renderGrayscaleImage } from &#039;./rendering/renderGrayscaleImage.js&#039;;
+export { renderWebImage } from &#039;./rendering/renderWebImage.js&#039;;
+export { default as renderToCanvas } from &#039;./rendering/renderToCanvas.js&#039;;
+
+/**
+ * @module PixelCoordinateSystem
+ */
+
+/**
+ * @module ViewportSettings
+ */
+
+export { default as canvasToPixel } from &#039;./canvasToPixel.js&#039;;
+export { default as disable } from &#039;./disable.js&#039;;
+export { default as displayImage } from &#039;./displayImage.js&#039;;
+export { default as draw } from &#039;./draw.js&#039;;
+export { default as drawInvalidated } from &#039;./drawInvalidated.js&#039;;
+export { default as enable } from &#039;./enable.js&#039;;
+export { getElementData, removeElementData } from &#039;./enabledElementData.js&#039;;
+export {
+  getEnabledElement,
+  addEnabledElement,
+  getEnabledElementsByImageId,
+  getEnabledElements
+} from &#039;./enabledElements.js&#039;;
+
+export {
+  addLayer,
+  removeLayer,
+  getLayer,
+  getLayers,
+  getVisibleLayers,
+  setActiveLayer,
+  getActiveLayer,
+  purgeLayers,
+  setLayerImage
+} from &#039;./layers.js&#039;;
+
+export { default as fitToWindow } from &#039;./fitToWindow.js&#039;;
+export { default as getDefaultViewportForImage } from &#039;./getDefaultViewportForImage.js&#039;;
+export { default as getImage } from &#039;./getImage.js&#039;;
+export { default as getPixels } from &#039;./getPixels.js&#039;;
+export { default as getStoredPixels } from &#039;./getStoredPixels.js&#039;;
+export { default as getViewport } from &#039;./getViewport.js&#039;;
+export {
+  loadImage,
+  loadAndCacheImage,
+  registerImageLoader,
+  registerUnknownImageLoader
+} from &#039;./imageLoader.js&#039;;
+
+export { default as invalidate } from &#039;./invalidate.js&#039;;
+export { default as invalidateImageId } from &#039;./invalidateImageId.js&#039;;
+export { default as pageToPixel } from &#039;./pageToPixel.js&#039;;
+export { default as pixelToCanvas } from &#039;./pixelToCanvas.js&#039;;
+export { default as reset } from &#039;./reset.js&#039;;
+export { default as resize } from &#039;./resize.js&#039;;
+export { default as setToPixelCoordinateSystem } from &#039;./setToPixelCoordinateSystem.js&#039;;
+export { default as setViewport } from &#039;./setViewport.js&#039;;
+export { default as updateImage } from &#039;./updateImage.js&#039;;
+export { default as pixelDataToFalseColorData } from &#039;./pixelDataToFalseColorData.js&#039;;
+
+export { default as rendering } from &#039;./rendering/index.js&#039;;
+export { default as imageCache } from &#039;./imageCache.js&#039;;
+export { default as metaData } from &#039;./metaData.js&#039;;
+export { default as webGL } from &#039;./webgl/index.js&#039;;
+export { default as colors } from &#039;./colors/index.js&#039;;
+
+export { convertImageToFalseColorImage,
+  convertToFalseColorImage,
+  restoreImage } from &#039;./falseColorMapping.js&#039;;
+
+export { default as EVENTS, events } from &#039;./events.js&#039;;
+export { default as triggerEvent } from &#039;./triggerEvent.js&#039;;</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ cyclomatic }} <br>
+    Length : {{ halstead.length }} <br>
+    Difficulty : {{ halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
